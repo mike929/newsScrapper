@@ -19,7 +19,6 @@ var termination = chalk.bold.magenta;
 module.exports =function(){
 
     mongoose.connect(MONGODB_URI);
-    // mongodb://heroku_bjk8xf40:9uumveatdql83t47m9jv1dghed@ds227146.mlab.com:27146/heroku_bjk8xf40
 
     mongoose.connection.on('connected', function(){
         console.log(connected("Mongoose default connection is open to ", MONGODB_URI));
