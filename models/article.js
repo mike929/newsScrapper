@@ -1,7 +1,7 @@
 // Require Mongoose
 var mongoose = require('mongoose');
 // require the connection
-var db = require("../javascript/connection");
+var db = require("../public/javascripts/connection");
 // Create a Schema Class
 var Schema = mongoose.Schema;
 
@@ -22,6 +22,10 @@ var articleSchema = new Schema({
     required: true,
     unique: true
   },
+      // 'img' is optional and of type String
+      img: {
+        type: String
+    },
   
 note: [{
     // Saves array of notes
