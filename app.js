@@ -10,6 +10,7 @@ var mongoose = require("mongoose");
 var app = require("./public/javascripts/connection");
 var request = require("request");
 var router = require('./routes/routes');
+require('./controller/scraper')
 // const router = require("./routes");
 
 
@@ -39,7 +40,7 @@ var databaseUrl = "news";
 mongoose.Promise = Promise; 
 var MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/news";
 mongoose.connect(MONGODB_URI);
-console.log(mongoose);
+console.log(MONGODB_URI);
 
 // set up the HBS view engine
 app.engine('hbs', hbs({defaultLayout: 'main', extname: 'hbs', partialsDir: [__dirname + '/views/partials']}));
