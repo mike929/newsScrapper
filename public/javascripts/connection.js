@@ -6,7 +6,7 @@ var mongoose = require('mongoose');
 var chalk = require('chalk');
 
 //require database URL from process.env file
-var MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/mongoHeadlines";
+var MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/newsHeadlines";
 
 
 var connected = chalk.bold.cyan;
@@ -39,3 +39,4 @@ module.exports =function(){
         });
     });
 }
+

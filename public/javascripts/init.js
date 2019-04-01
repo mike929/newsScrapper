@@ -8,4 +8,3 @@ $(document).ready(function($){
 })(jQuery); // end of jQuery name space
 
 
-module.export=init;

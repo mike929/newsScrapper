@@ -4,96 +4,189 @@ var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 var hbs = require('express-handlebars');
+var http = require('http');
+var bodyParser = require("body-parser");
+var mongoose = require("mongoose");
+var app = require("./public/javascripts/connection");
+var request = require("request");
+var router = require('./routes/routes');
+// const router = require("./routes");
 
 
 
-// var indexRouter = require('./routes/index');
-// var usersRouter = require('./routes/users');
-var routes = require('./routes/routes');
 
+var PORT = process.env.PORT || 3000;
+
+// initialize Express
 var app = express();
 
-// view engine setup
-// app.set('views', path.join(__dirname, 'views'));
-// app.engine('hbs', hbs({defaultLayout: 'main', extname: 'hbs', partialsDir: [__dirname + '/views/partials']}));
-app.engine('hbs', hbs({defaultLayout: 'main'}));
+app.use('/', router);
+
+
+// use body-parser for handling form submissions
+app.use(bodyParser.urlencoded({
+  extended: false
+}));
+app.use(bodyParser.json({
+  type: "application/json"
+}));
+
+// serve the public directory
+app.use(express.static("public"));
+
+// use promises with Mongo and connect to the database
+var databaseUrl = "news";
+mongoose.Promise = Promise; 
+var MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost/news";
+mongoose.connect(MONGODB_URI);
+console.log(mongoose);
+
+// set up the HBS view engine
+app.engine('hbs', hbs({defaultLayout: 'main', extname: 'hbs', partialsDir: [__dirname + '/views/partials']}));
 app.set('view engine', 'hbs');
 
-app.use(logger('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+// Hook mongojs configuration to the db variable
+var db = require("./models");
 
-// Import routes
+// get all articles from the database that are not saved
+app.get("/", function(req, res) {
 
-// app.use('/', indexRouter);
-// app.use('/users', usersRouter);
-app.use('/', routes);
+  db.Article.find({
+      saved: false
+    },
 
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
+    function(error, dbArticle) {
+      if (error) {
+        console.log(error);
+      } else {
+        res.render("index", {
+          articles: dbArticle
+        });
+      }
+    })
+})
+
+// use cheerio to scrape stories from TechCrunch and store them
+app.get("/scrape", function(req, res) {
+  request("https://www.reuters.com/news/entertainment", function(error, response, html) {
+    // Load the html body from request into cheerio
+    var $ = cheerio.load(html);
+    $("#download-button").each(function(i, element) {
+
+      // trim() removes whitespace because the items return \n and \t before and after the text
+      var title = $(element).find("h2").text().trim();
+      var link = $(element).find("h2").attr("href");
+      var img = $(element).find("h2").attr("img");
+      // var intro = $(element).children(".post-block__content").text().trim();
+
+      // if these are present in the scraped data, create an article in the database collection
+      if (title && link && intro) {
+        db.Article.create({
+            title: title,
+            link: link,
+            img: img
+          },
+          function(err, inserted) {
+            if (err) {
+              // log the error if one is encountered during the query
+              console.log(err);
+            } else {
+              // otherwise, log the inserted data
+              console.log(inserted);
+            }
+          });
+        // if there are 10 articles, then return the callback to the frontend
+        console.log(i);
+        if (i === 10) {
+          return res.sendStatus(200);
+        }
+      }
+    });
+  });
 });
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+// route for retrieving all the saved articles
+app.get("/saved", function(req, res) {
+  db.Article.find({
+      saved: true
+    })
+    .then(function(dbArticle) {
+      // if successful, then render with the handlebars saved page
+      res.render("saved", {
+        articles: dbArticle
+      })
+    })
+    .catch(function(err) {
+      // If an error occurs, send the error back to the client
+      res.json(err);
+    })
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
 });
 
-// Launch App
-var port = process.env.PORT || 3000;
-
-
-app.listen(port, function()
-{
-  console.log('Running on port: ' + port);
+// route for setting an article to saved
+app.put("/saved/:id", function(req, res) {
+  db.Article.findByIdAndUpdate(
+      req.params.id, {
+        $set: req.body
+      }, {
+        new: true
+      })
+    .then(function(dbArticle) {
+      res.render("saved", {
+        articles: dbArticle
+      })
+    })
+    .catch(function(err) {
+      res.json(err);
+    });
 });
 
-//  * Event listener for HTTP server "error" event.
+// route for saving a new note to the db and associating it with an article
+app.post("/submit/:id", function(req, res) {
+  db.Note.create(req.body)
+    .then(function(dbNote) {
+      var articleIdFromString = mongoose.Types.ObjectId(req.params.id)
+      return db.Article.findByIdAndUpdate(articleIdFromString, {
+        $push: {
+          notes: dbNote._id
+        }
+      })
+    })
+    .then(function(dbArticle) {
+      res.json(dbNote);
+    })
+    .catch(function(err) {
+      // If an error occurs, send it back to the client
+      res.json(err);
+    });
+});
+
+// route to find a note by ID
+app.get("/notes/article/:id", function(req, res) {
+  db.Article.findOne({"_id":req.params.id})
+    .populate("notes")
+    .exec (function (error, data) {
+        if (error) {
+            console.log(error);
+        } else {
+          res.json(data);
+        }
+    });        
+});
 
 
-function onError(error) {
-  if (error.syscall !== 'listen') {
-    throw error;
-  }
+app.get("/notes/:id", function(req, res) {
 
-  var bind = typeof port === 'string'
-    ? 'Pipe ' + port
-    : 'Port ' + port;
+  db.Note.findOneAndRemove({_id:req.params.id}, function (error, data) {
+      if (error) {
+          console.log(error);
+      } else {
+      }
+      res.json(data);
+  });
+});
 
-  // handle specific listen errors with friendly messages
-  switch (error.code) {
-    case 'EACCES':
-      console.error(bind + ' requires elevated privileges');
-      process.exit(1);
-      break;
-    case 'EADDRINUSE':
-      console.error(bind + ' is already in use');
-      process.exit(1);
-      break;
-    default:
-      throw error;
-  }
-}
-
-/**
- * Event listener for HTTP server "listening" event.
- */
-
-function onListening() {
-  var addr = server.address();
-  var bind = typeof addr === 'string'
-    ? 'pipe ' + addr
-    : 'port ' + addr.port;
-  debug('Listening on ' + bind);
-}
-
-
-module.exports = app;
+// listen for the routes
+app.listen(PORT, function() {
+  console.log("App is running");
+});
