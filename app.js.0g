@@ -11,7 +11,6 @@ var app = require("./public/javascripts/connection");
 var request = require("request");
 var router = require('./routes/routes');
 require('./controller/scraper')
-var cheerio = require("cheerio");
 // const router = require("./routes");
 
 
@@ -81,7 +80,6 @@ app.get("/scrape", function(req, res) {
       var title = $(element).find("h2").text().trim();
       var link = $(element).find("h2").attr("href");
       var img = $(element).find("h2").attr("img");
-
       // var intro = $(element).children(".post-block__content").text().trim();
 
       // if these are present in the scraped data, create an article in the database collection

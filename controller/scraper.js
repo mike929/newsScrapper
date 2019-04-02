@@ -9,8 +9,8 @@ var request = require('request');
 var Article = require('../models/Article');
 
 // define the site we want to scrape
-var website = 'https://www.reuters.com/news/world';
-
+// var website = 'https://www.reuters.com/news/world';
+var website = 'https://www.wired.com/latest-news';
 function scrapedNews(callback) 
 {
   request(website, function(error, response, html)
@@ -22,7 +22,8 @@ function scrapedNews(callback)
     var $ = cheerio.load(html);
 
     //Target articles by tag
-    $("ul.col li a").each(function(i, element) 
+    // $("ul.col li a").each(function(i, element) 
+    $("h2.col li a").each(function(i, element) 
     {
       
 
