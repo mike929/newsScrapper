@@ -33,7 +33,8 @@ app.use(bodyParser.json({
 }));
 
 // serve the public directory
-app.use(express.static("public"));
+// app.use(express.static("public"));
+app.use(express.static(__dirname + '/public'));
 
 // use promises with Mongo and connect to the database
 var databaseUrl = "news";
@@ -47,7 +48,8 @@ app.engine('hbs', hbs({defaultLayout: 'main', extname: 'hbs', partialsDir: [__di
 app.set('view engine', 'hbs');
 
 // Hook mongojs configuration to the db variable
-var db = require("./models");
+// var db = require("./models");
+var routes = require('./routes/routes');
 
 // get all articles from the database that are not saved
 app.get("/", function(req, res) {
